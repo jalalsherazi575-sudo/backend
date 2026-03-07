@@ -28,11 +28,6 @@ RUN COMPOSER_ALLOW_SUPERUSER=1 php composer.phar install --no-dev --no-scripts -
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs && \
     chmod -R 775 bootstrap/cache storage
 
-# Cache Laravel configuration
-RUN php artisan config:cache && \
-    php artisan route:cache && \
-    php artisan view:cache
-
 # Expose port
 EXPOSE 8080
 
