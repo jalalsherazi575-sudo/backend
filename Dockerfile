@@ -24,6 +24,10 @@ COPY . .
 # Install composer dependencies (without running scripts)
 RUN COMPOSER_ALLOW_SUPERUSER=1 php composer.phar install --no-dev --no-scripts --optimize-autoloader
 
+# Create required directories and set permissions
+RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs && \
+    chmod -R 775 bootstrap/cache storage
+
 # Cache Laravel configuration
 RUN php artisan config:cache && \
     php artisan route:cache && \
