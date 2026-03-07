@@ -21,8 +21,8 @@ WORKDIR /app
 # Copy application files
 COPY . .
 
-# Install composer dependencies (without running scripts)
-RUN COMPOSER_ALLOW_SUPERUSER=1 php composer.phar install --no-dev --no-scripts --optimize-autoloader
+# Install composer dependencies (including dev for service providers)
+RUN COMPOSER_ALLOW_SUPERUSER=1 php composer.phar install --no-scripts --optimize-autoloader
 
 # Create required directories and set permissions
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs && \
