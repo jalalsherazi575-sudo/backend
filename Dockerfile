@@ -25,7 +25,7 @@ COPY . .
 RUN rm -rf bootstrap/cache/*.php storage/framework/cache/* storage/framework/sessions/* storage/framework/views/*
 
 # Install composer dependencies (including dev for service providers)
-RUN COMPOSER_ALLOW_SUPERUSER=1 php composer.phar install --no-scripts --optimize-autoloader
+RUN COMPOSER_ALLOW_SUPERUSER=1 php composer.phar install --no-scripts
 
 # Create required directories and set permissions
 RUN mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views storage/logs && \
