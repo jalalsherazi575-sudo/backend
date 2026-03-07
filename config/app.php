@@ -161,7 +161,7 @@ return [
         Laraspace\Providers\EventServiceProvider::class,
         Laraspace\Providers\RouteServiceProvider::class,
 
-        Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider::class,
+        // Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider::class, // Dev only - commented out for production
         Laracasts\Flash\FlashServiceProvider::class,
         Laravel\Socialite\SocialiteServiceProvider::class,
 		//Intervention\Image\ImageServiceProvider::class,
