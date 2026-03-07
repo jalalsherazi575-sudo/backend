@@ -15,6 +15,7 @@
 Homestead.json
 Homestead.yaml
 .env
+.env.railway
 public/images
 /public/customerregisterphoto/
 
