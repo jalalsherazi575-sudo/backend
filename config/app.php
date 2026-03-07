@@ -168,7 +168,7 @@ return [
         Srmklive\PayPal\Providers\PayPalServiceProvider::class,
         Maatwebsite\Excel\ExcelServiceProvider::class,
         Intervention\Image\ImageServiceProvider::class,
-        Yajra\DataTables\DataTablesServiceProvider::class,
+        // Yajra\DataTables\DataTablesServiceProvider::class, // Package not installed
     ],
 
     /*
