@@ -1,4 +1,5 @@
 # Use PHP 8.2 with required extensions
+# Updated: Fixed libcurl dependency
 FROM php:8.2-cli
 
 # Install system dependencies
