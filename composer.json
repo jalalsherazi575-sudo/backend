@@ -1,0 +1,83 @@
+{
+    "name": "laravel/laravel",
+    "description": "The Laravel Framework.",
+    "keywords": [
+        "framework",
+        "laravel"
+    ],
+    "license": "MIT",
+    "type": "project",
+    "require": {
+        "php": "^7.1|^8.2",
+        "laravel/framework": "9.11",
+        "laravel/socialite": "^5.11",
+        "srmklive/paypal": "~3.0",
+        "maatwebsite/excel": "^3.1",
+        "laracasts/flash": "^3.2",
+        "laravel/ui": "^3.4",
+        "fideloper/proxy": "^4.4",
+        "twilio/sdk": "^7.13",
+        "fzaninotto/faker": "^1.5",
+        "symfony/css-selector": "^7.0",
+        "symfony/dom-crawler": "^7.0",
+        "filp/whoops": "^2.15",
+        "intervention/image": "^2.5",
+        "laravel/passport": "^11.10",
+        "laravel/sanctum": "^2.15",
+          "tpay-com/tpay-php": "^2.4",
+        "guzzlehttp/guzzle": "^7.8"
+        
+    },
+    "require-dev": {
+        "barryvdh/laravel-ide-helper": "^2.10",
+        "mockery/mockery": "^1.6",
+        "phpunit/phpunit": "^10.5"
+    },
+    "autoload": {
+        "classmap": [
+            "database"
+        ],
+        "psr-4": {
+            "Laraspace\\": "app/",
+            "App\\Helpers\\": "app/Helpers/",
+            "Tpay\\": "vendor/tpay-com/tpay-php/src"
+        },
+        "files": [
+            "app/Space/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "classmap": [
+            "tests/TestCase.php"
+        ]
+    },
+    "scripts": {
+        "post-root-package-install": [
+            "php -r \"file_exists('.env') || copy('.env.example', '.env');\""
+        ],
+        "post-create-project-cmd": [
+            "php artisan key:generate"
+        ],
+        "post-autoload-dump": [
+            "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
+            "@php artisan package:discover"
+        ]
+    },
+    "config": {
+        "preferred-install": "dist",
+        "allow-plugins": {
+            "kylekatarnls/update-helper": true
+        }
+    },
+    "extra": {
+        "laravel": {
+            "dont-discover": []
+        }
+    },
+    "repositories": {
+        "hooks": {
+            "type": "composer",
+            "url": "https://larapack.io"
+        }
+    }
+}

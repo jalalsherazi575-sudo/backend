@@ -1,0 +1,25 @@
+/node_modules
+/public/storage
+/public/hot
+/storage/*.key
+/vendor
+/storage
+/public/questionImage/
+/public/pronounciationFile/
+/public/questionAudios/
+/public/questionVideos/
+/public/questionAudioSelection/
+/public/optionImages/
+/live_bk/16-07-2020/
+/.idea
+Homestead.json
+Homestead.yaml
+.env
+public/images
+/public/customerregisterphoto/
+
+# Editor directories and files
+.idea
+.vscode
+.DS_Store
+.htaccess

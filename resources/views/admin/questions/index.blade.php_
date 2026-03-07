@@ -1,0 +1,215 @@
+@extends('admin.layouts.layout-basic')
+
+@section('scripts')
+    <script>
+
+jQuery(document).ready(function () {
+	var table = jQuery('#users-datatable').dataTable({
+		"order": [[ 0, "desc" ]],
+		"lengthMenu": [[-1,10, 25, 50,100,], ["All",10, 25, 50,100]],
+        pageLength: 50,
+		aoColumnDefs: [ 
+			{  bSortable: false, bSearchable: false, aTargets: [ -1 ] },
+		],
+		"fnInfoCallback": function( oSettings, iStart, iEnd, iMax, iTotal, sPre ) {
+			var tottext = 'entries';
+			if(iTotal > 1){ tottext = 'entries'; }else{ tottext = 'entry'; }
+			if(iTotal > 0){iStart = iStart;}else{iStart = 0;}
+			return 'Showing '+iStart+' to '+iEnd+' of '+iTotal+' '+tottext;
+		},
+		//"pageLength": pageLength,
+		"fnRowCallback": function( nRow, aData, iDisplayIndex, iDisplayIndexFull ) {
+			var settings = this.fnSettings();
+			var str = settings.oPreviousSearch.sSearch;
+			jQuery('.td', nRow).each( function (i) {
+			 //   this.innerHTML = aData[i].replace( str, '<span class="highlight">'+str+'</span>' );
+			} );
+			return nRow;
+		}
+	});
+	@if(count($questions)<10)
+		$('#users-datatable_paginate').hide();
+	@endif
+	//table.fnSetColumnVis( 0, false );
+
+    
+
+});
+/*Multiple Delete*/
+function selectall() {
+    var form = document.forms['form']; // Get the form by name
+    if (form.delall.checked) {
+        var checkboxes = document.getElementsByName('del[]');
+        for (var i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = true;
+        }
+    } else {
+        var checkboxes = document.getElementsByName('del[]');
+        for (var i = 0; i < checkboxes.length; i++) {
+            checkboxes[i].checked = false;
+        }
+    }
+}
+
+function confirmDelete() {
+    var form = document.forms['form']; // Get the form by name
+    var hasChecked = false;
+
+    for (var i = 0; i < form.elements.length; i++) {
+        if (form.elements[i].type == "checkbox" && form.elements[i].checked == true) {
+            hasChecked = true;
+            break;
+        }
+    }
+
+    if (!hasChecked) {
+        alert("At least select one record to be deleted..!");
+        return false;
+    } else {
+        var confirmation = confirm("Do you really want to delete...!");
+        if (confirmation) {
+            document.getElementById("delId").value = "del";
+             // Prevent form default submission and handle with AJAX
+            event.preventDefault();
+
+            // Serialize form data
+            var formData = new FormData(form);
+            //form.submit();
+            $.ajax({
+		        url: "{{ URL::to('admin/questions/deleteall')}}",
+		        type: "post",
+                data: formData,
+                processData: false,
+                contentType: false,
+	          	success: function(data){
+	                if (data.status == 'success') {
+	                    toastr.success(data.message);
+	                       setTimeout(function() {
+	                        location.reload(); // Delay the reload to ensure toastr message is shown
+	                    }, 1000); // Adjust the delay as necessary
+	               } else {
+	                    toastr.error(data.message);
+	                }
+	            }
+	     	});
+        } else {
+            return false;
+        }
+    }
+}
+
+/*End*/
+function check_delete(id)
+{
+	
+	if (id!='' && confirm("Are you sure want to delete this Question?")) {
+		$.ajax({
+	        url: "{{URL::to('admin/')}}/questions/delete/"+id,
+	        type: "get",
+          	success: function(data){
+                if (data.status == 'success') {
+                    toastr.success(data.message);
+                       setTimeout(function() {
+                        location.reload(); // Delay the reload to ensure toastr message is shown
+                    }, 1000); // Adjust the delay as necessary
+               } else {
+                    toastr.error(data.message);
+                }
+            }
+     	});
+	}
+}
+// Get the file input element
+const fileInput = document.getElementById('csv_file');
+
+// Add event listener for file selection change
+fileInput.addEventListener('change', function() {
+// Submit the form when a file is selected
+document.getElementById('uploadForm').submit();
+});
+
+</script>
+@stop
+
+@section('content')
+    <div class="main-content">
+        <div class="page-header">
+            <h3 class="page-title">Questions</h3>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{{route('admin.dashboard')}}">Home</a></li>
+                <li class="breadcrumb-item active">Questions</li>
+            </ol>
+            <div class="page-actions ques_listing"> 
+              	@if(checkPermission(Auth::user()->id,'create',$currentMenuId))
+                	<a href="{{URL::to('admin/questions/add')}}" class="btn btn-primary"><i class="icon-fa icon-fa-plus"></i> New Question</a>
+                @endif
+                <form id="uploadForm" method="POST" action="{{ route('importQuestions') }}" enctype="multipart/form-data">
+			    	@csrf
+				    <label for="csv_file" class="btn btn-primary"><i class="icon-fa icon-fa-upload"></i> Import Questions</label>
+				    <input type="file" id="csv_file" name="question_import" accept=".csv" style="display: none;">
+                </form>
+				<button onclick="confirmDelete()" class="btn btn-danger"><i class="icon-fa icon-fa-trash"></i> Delete </button>
+            </div>
+        </div>
+        @include('admin.layouts.partials.flash-message')
+        <div class="row">
+            <div class="col-sm-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h6>All Questions</h6>
+                        <div class="card-actions"></div>
+                    </div>
+                    <div class="card-body">
+                    	<form method="post" action="{{ URL::to('admin/questions/deleteall')}}" name="form">
+							<input type="hidden" name="_token" value="{{{ csrf_token() }}}" />
+	                        <input type="hidden" name="delId" id = "delId" value="" />
+	                        <table id="users-datatable" class="table table-striped table-bordered" cellspacing="0" width="100%">
+	                            <thead>
+	                            <tr>
+	                            	<th width="8%"><input type="checkbox" name="delall" onClick="selectall();"> Select All</th>
+	                                <th>Question</th>
+	                                <th width="6%">Status</th>
+		                            <th width="28%">Actions</th>
+	                            </tr>
+	                            </thead>
+	                            @foreach($questions as $vals)
+	                            <tr>
+	                            	 <td><input type="checkbox" class='uniquechk' name='del[]' value="{{$vals->questionId}}"></td>
+	                               <td>{{ $vals->question }}</td>
+	                               @if($vals->isActive==1)
+									<td>Active</td>
+								    @else 
+	                                <td>Inactive</td>
+								    @endif
+	                                <td>
+	                                   @if(checkPermission(Auth::user()->id,'update',$currentMenuId))	
+											<a href="{{URL::to('admin/questions/edit/'.$vals->questionId.'')}}" class="btn btn-default btn-sm"><i class="icon-fa icon-fa-search"></i>Edit</a>
+											@endif
+											
+											@if(checkPermission(Auth::user()->id,'delete',$currentMenuId))
+			                                 <a onclick="return check_delete({{$vals->questionId}});" class="btn btn-default btn-sm" data-token="{{csrf_token()}}" data-delete data-confirmation="notie"> <i class="icon-fa icon-fa-trash"></i> Delete</a>
+			                                @endif
+			                                
+			                                @if(checkPermission(Auth::user()->id,'update',$currentMenuId)) 
+			                                 
+				                                 @if($vals->isActive==1)
+												<a href="{{URL::to('admin/questions/status/0/'.$vals->questionId.'')}}" class="btn btn-default btn-sm"><i class="icon-fa icon-fa-lock"></i>Inactive</a>
+											     @else
+												<a href="{{URL::to('admin/questions/status/1/'.$vals->questionId.'')}}" class="btn btn-default btn-sm"><i class="icon-fa icon-fa-unlock-alt"></i>Active</a>	 
+											     @endif
+										    
+										    @endif 
+										    <a href="{{URL::to('admin/questions/comments/'.$vals->questionId.'')}}" class="btn btn-default btn-sm"><i class="icon-fa icon-fa-search"></i> Comments</a>
+	                                </td>
+	                            </tr>
+	                            @endforeach
+	                            <tbody>
+	                            </tbody>
+	                        </table>
+	                     </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+@stop

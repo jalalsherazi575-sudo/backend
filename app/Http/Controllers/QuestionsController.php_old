@@ -1,0 +1,460 @@
+<?php
+
+namespace Laraspace\Http\Controllers;
+
+use Laraspace\Http\Requests\QuestionsRequest;
+use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Http\Request;
+use Laraspace\LevelManagement;
+use Laraspace\LessionManagement;
+use Laraspace\Questions;
+use Laraspace\Subject;
+use Laraspace\Topics;
+use Image;
+use Laraspace\Http\Controllers\CommanController;
+use Illuminate\Support\Facades\DB;
+use Laraspace\Language;
+use Laraspace\TopicQueRel;
+use Laraspace\QuestionCommnent;
+use Laraspace\Imports\QuestionsImport;
+use Laraspace\QuestionOption;
+use Laracasts\Flash\Flash;
+
+class QuestionsController extends Controller
+{
+
+	public function __construct() {
+        $this->middleware('auth');
+    }
+    
+    public function index() {
+   		$questions = Questions::all();
+       	return view('admin.questions.index',compact('questions'));
+	}
+	
+	public function add() {
+	   $common=new CommanController;
+	   $rank=$common->getQuestionMaxRank();
+	   $cat = LevelManagement::where('isActive',1)->get();
+	   $topics = Topics::select('topics.id','topics.topicName','subject.subjectName')->join('subject', 'topics.subjectId', '=', 'subject.id')->where('topics.isActive','1')->get();	
+	   return view('admin.questions.addedit',compact('rank','topics','cat'));
+	}
+
+	
+	public function postCreate(QuestionsRequest $request) {
+		try{
+			//echo "<pre>";print_r($request->all());exit;
+			$questionType=isset($request->questionType)?($request->questionType):0;
+			$question=isset($request->question)?($request->question):"";
+			$status=isset($request->status)?($request->status):0;
+	    	$fillBlankWord=isset($request->fillBlankWord)?($request->fillBlankWord):"";	
+	    	$topicId=isset($request->topicId)?($request->topicId):"";	
+	    	$description=isset($request->description)?($request->description):"";	
+	      $checkduplicate = DB::table('tblquestion')->where([['question', '=',$question],['questionType', '=',$questionType]])->count();
+	      $categoryId=isset($request->categoryId)?($request->categoryId):0;
+	      $subjectId=isset($request->subjectId)?($request->subjectId):0;
+	        $isNotValidimage=0;
+	        $isNotValidaudio=0;
+	        
+			if ($checkduplicate==0) {
+				$questions = new Questions();
+				$questions->question = $question;
+	         /*$questions->categoryId = $categoryId;
+	         $questions->subjectId = $subjectId;*/
+	         $questions->description = $description;
+			 	$questions->isActive=$status;
+			 	$questions->questionType=$questionType;
+			 	$questions->fillBlankWord=$fillBlankWord;
+				$questions->createdDate=date('Y-m-d H:i:s');
+				$questions->questionHeader=($request->questionHeader) ? $request->questionHeader : "";
+				$questions->listType=($request->listType) ? $request->listType : 1;
+				$questions->save();
+				
+				$questionId=$questions->questionId;
+
+				
+				if ($questionType==1) {
+				 	$questionAsk=isset($request->questionImageText)?($request->questionImageText):0;
+
+
+					foreach ($questionAsk as $key => $value) {
+						$questionImageText=isset($request->questionImageText[$key])?($request->questionImageText[$key]):"";
+						$isCorrectAnswer=isset($request->isCorrectAnswer[$key])?($request->isCorrectAnswer[$key]):0;
+						$filename = '';
+						$optionImage = '';
+						$imageData = new QuestionOption();
+						$imageData->questionId = $questionId;
+						$imageData->questionImageText = $questionImageText;
+						$imageData->isCorrectAnswer = $isCorrectAnswer;
+						$imageData->save();
+						/*$ImageData=DB::table('tblquestionoption')->insert(
+						['questionId'=>$questionId,'questionImage'=>$filename,'questionImageText'=>$questionImageText,'isCorrectAnswer'=>$isCorrectAnswer,'questionAudio'=>$optionImage]);*/
+
+					}
+				 }
+                for($i=0;$i<count($topicId);$i++){
+                	$subquerel = new TopicQueRel();
+					$subquerel->topicId = $topicId[$i];
+		         	$subquerel->questionId = $questionId;
+		         	$subquerel->creation_time = date('Y-m-d-His');
+		         	$subquerel->save();
+                }
+
+				flash()->success('Question has  added successfully.');
+				return redirect()->to('/admin/questions');
+			} else {
+				flash()->error('This Question name has been already taken. Please try with another name.');
+				return redirect()->to('/admin/questions/add');
+			}
+		} catch (Exception $e) {
+        	echo $e->getMessage();
+		}
+
+   	}
+	   
+   	public function Status($status,$id) {
+      
+	  $questions = Questions::find($id);
+	  $questions->isActive=$status;
+	  $questions->save();
+	  flash()->success('Question status has updated successfully.');
+	  return redirect()->to('/admin/questions');
+	  
+   	}
+    /*Note: Question Related Delete All table*/
+   	public function Delete($id) {
+	   	$questions = Questions::find($id);
+        if ($questions) {
+	    	$relatedQuestionTopics = DB::table('topicQueRel')->where('questionId', $id)->delete();
+	    	$relatedQuestionOption = DB::table('tblquestionoption')->where('questionId', $id)->delete();
+	    	$relatedQuestionComment = DB::table('question_commnent')->where('questionId', $id)->delete();
+            $questions->delete();
+            return response()->json(['status' => 'success', 'message' => 'Question deleted successfully.']);
+        }
+
+        return response()->json(['status' => 'error', 'message' => 'Question not found.']);
+	}
+   
+	public function Deleteall(Request $request) {
+   		if(count($request->del) != 0){
+			foreach ($request->del as $val) {
+				$question = Questions::find($val);
+				$relatedQuestionTopics = DB::table('topicQueRel')->where('questionId', $val)->delete();
+		    	$relatedQuestionOption = DB::table('tblquestionoption')->where('questionId', $val)->delete();
+		    	$relatedQuestionComment = DB::table('question_commnent')->where('questionId', $val)->delete();
+				$question->delete();
+			}
+			return response()->json(['status' => 'success', 'message' => 'Question deleted successfully.']);
+			
+		}	
+		return response()->json(['status' => 'error', 'message' => 'Question not found.']);	 
+	}
+	   
+	   	public function getEdit($id) {
+       	 	$common=new CommanController;
+       	 	$questions = Questions::findOrFail($id);
+       	 	$categories = LevelManagement::where('isActive',1)->orderby('sortOrder','asc')->get();	
+       	 	$subjects = Subject::where('categoryId',$questions->categoryId)->get(["subjectName", "id"]);
+       	 	
+       	 	$questionimage = QuestionOption::where([['questionId', '=',$id]])->get();
+       	 	
+       	 	$topics = Topics::select('topics.id','topics.topicName','subject.subjectName')->join('subject', 'topics.subjectId', '=', 'subject.id')->where('topics.isActive','1')->get();	
+       	 	$queTopic = TopicQueRel::where('questionId',$id)->pluck('topicId')->toArray();
+       	 	$cat = LevelManagement::where('isActive',1)->get();
+       	 	return view('admin.questions.addedit',compact('questions','questionimage','categories','subjects','topics','queTopic','cat'));
+       	}
+
+       	public function deleteQuestionLogo($id) {
+		   	$delete=DB::delete("update tblquestionoption SET questionImage='' where id=$id");
+		   	echo 1;
+		   	exit();
+	   	}
+
+	   	public function deleteAudioSelect($id) {
+	   		$delete=DB::delete("update tblquestionoption SET questionAudio='' where id=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	   	public function deleteQuestion($id) {
+	   		$delete=DB::delete("delete from tblquestionoption  where id=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	   	public function deleteQuestionWordOne($id) {
+	   		$delete=DB::delete("delete from tblquestionwordone  where id=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	   	public function deleteQuestionWordTwo($id) {
+	   		$delete=DB::delete("delete from tblquestionwordtwo  where id=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	    public function deleteQuestionVocal($id) {
+	   		$delete=DB::delete("update tblquestion SET uploadVocals=''  where questionId=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	   	public function deleteQuestionVideo($id) {
+	   		$delete=DB::delete("update tblquestion SET video=''  where questionId=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	   	public function deleteQuestionAudio($id) {
+	   		$delete=DB::delete("update tblquestion SET audio=''  where questionId=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	   	public function deleteOptionFillBlank($id) {
+	   		$delete=DB::delete("delete from tblquestionfillblank  where id=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	   	public function deleteremoveOptionAl($id) {
+	   		$delete=DB::delete("delete from tblquestionalphabetsnumbers  where id=$id");
+	   		echo 1;
+	   		exit();
+	   	}
+
+	   	public function deleteQuestionPronounciationFile($id) {
+		   	$delete=DB::delete("update tblquestionalphabetsnumbers SET pronounciationFile='' where id=$id");
+		   	echo 1;
+		   	exit();
+	   	}
+
+	   public function deleteQuestionImageFile($id) {
+	   	$delete=DB::delete("update tblquestionalphabetsnumbers SET optionImages='' where id=$id");
+	   	echo 1;
+	   	exit();
+	   }
+	   
+	   public function deleteremoveOptionWordMatch($id) {
+	   	$delete=DB::delete("delete from tblquestionmatchfollowing  where id=$id");
+	   	echo 1;
+	   	exit();
+	   }
+	   
+	   
+       
+	   
+	   
+   	public function postEdit(QuestionsRequest $request,$id) {
+        $lessionId=isset($request->lessionId)?($request->lessionId):0;
+		$questionType=isset($request->questionType)?($request->questionType):0;
+
+		$question=isset($request->question)?($request->question):"";
+		$sortOrder=isset($request->sortOrder)?($request->sortOrder):0;
+		$status=isset($request->status)?($request->status):0;
+      	$topicId=isset($request->topicId)?($request->topicId):"";	
+        $lession = LessionManagement::where('lessionId',$lessionId)->first();
+
+        $lessionName=isset($lession->lessionName)?($lession->lessionName):"";	
+        $fillBlankWord=isset($request->fillBlankWord)?($request->fillBlankWord):"";	
+
+		$checkduplicate = DB::table('tblquestion')->where([['question', '=',$question],['questionId', '!=',$id],['questionType', '=',$questionType]])->count();
+			$categoryId=isset($request->categoryId)?($request->categoryId):0;
+      	$subjectId=isset($request->subjectId)?($request->subjectId):0;
+
+   	   	$isNotValidimage=0;
+   	   	$isNotValidaudio=0;
+   	  
+      	if ($checkduplicate==0) {
+      		$questions = Questions::find($id);
+		  
+            $questions->lessionId = $lessionId;
+            $questions->lessionName = $lessionName;
+            $questions->question = $question;
+           /* $questions->categoryId = $categoryId;
+            $questions->subjectId = $subjectId;*/
+				$questions->isActive=$status;
+				$questions->questionType=$questionType;
+				$questions->sortOrder=$sortOrder;
+				$questions->fillBlankWord=$fillBlankWord;
+
+			$questions->createdDate=date('Y-m-d H:i:s');
+			$questions->questionHeader=($request->questionHeader) ? $request->questionHeader : "";
+			$questions->listType=($request->listType) ? $request->listType : 1;
+			$questions->save();
+
+			 
+			if ($questionType==1) {
+				if (isset($request->questionImageText) && !$request->hasFile('questionImage')) {
+					$quetext=$request->questionImageText;
+
+                    foreach($quetext as $keys => $vals) {
+						$isCorrectAnswer=isset($request->isCorrectAnswer[$keys])?($request->isCorrectAnswer[$keys]):0;
+						$checkrecord = QuestionOption::where([['id', '=',$keys]])->count();
+
+
+		                if ($checkrecord==0) {
+		                	$imageData = new QuestionOption();
+							$imageData->questionId = $id;
+							$imageData->questionImageText = $vals;
+							$imageData->isCorrectAnswer = $isCorrectAnswer;
+							$imageData->save();
+                            /*$ImageData=DB::table('tblquestionoption')->insert(['questionId'=>$id,'questionImageText'=>$vals,'isCorrectAnswer'=>$isCorrectAnswer]);*/
+						} else {
+	                        $delete=DB::delete("update tblquestionoption SET questionId=$id,questionImageText='".$vals."',isCorrectAnswer=".$isCorrectAnswer." where id=$keys");
+						}
+					}
+                }
+			}
+
+			$queTopic = TopicQueRel::where('questionId',$id)->get();
+			if(count($queTopic)>0){
+				$deleterel = DB::table('topicQueRel')->where('questionId', $id)->delete();
+			}
+
+			for($i=0;$i<count($topicId);$i++){
+            	$subquerel = new TopicQueRel();
+				$subquerel->topicId = $topicId[$i];
+	         	$subquerel->questionId = $id;
+	         	$subquerel->creation_time = date('Y-m-d-His');
+	         	$subquerel->save();
+            } 
+			
+			flash()->success('Question has updated successfully.');
+		  	return redirect()->to('/admin/questions');
+		
+		} else {
+			flash()->error('This Question name has been already taken. Please try with another name.');
+		    return redirect()->to('/admin/questions/edit/'.$id);
+		
+		} 
+   	}
+
+	public function getSubject($catId){
+		$subjects = Subject::where('categoryId',$catId)->get(["subjectName", "id"]);
+		return response()->json($subjects);
+	}
+
+	public function getTopic(Request $request){
+		 $term = $request->input('term');
+		//$topics = Topics::where('subjectId',$subId)->get(["topicName", "id"]);
+
+		$topics = Topics::select('topics.id','topics.topicName','subject.subjectName','tbllevelmanagement.levelName')
+										->join('subject', 'topics.subjectId', '=', 'subject.id')
+										->join('tbllevelmanagement', 'subject.categoryId', '=', 'tbllevelmanagement.levelId')
+										->where('topics.isActive','1')
+										->where('topicName', 'LIKE', '%' . $term . '%')
+										->get();
+	   $data = [];
+	    foreach ($topics as $topic) {
+	        $data[] = [
+	            'id' => $topic->id,
+	            'text' => $topic->topicName .' - '. $topic->subjectName .' - '. $topic->levelName ,
+	        ];
+	    }
+
+	    return response()->json($data);
+	}
+	public function getSelectedTopic($topicId)
+    {
+    	
+    	$topicId = explode(',',$topicId);
+        // Fetch selected values from the database or any other source
+        $selectedValues = Topics::select('topics.id','topics.topicName','subject.subjectName','tbllevelmanagement.levelName')
+										->join('subject', 'topics.subjectId', '=', 'subject.id')
+										->join('tbllevelmanagement', 'subject.categoryId', '=', 'tbllevelmanagement.levelId')
+										->where('topics.isActive','1')
+										->whereIn('topics.id',$topicId)->get(); // Example selected values
+
+        // Format the data in the required format for Select2
+        $data = [];
+
+        foreach ($selectedValues as $value) {
+            $data[] = [
+                'id' => $value->id,
+               'text' => $value->topicName .' - '. $value->subjectName .' - '. $value->levelName ,
+            ];
+        }
+
+        return response()->json($data);
+    }
+	/*Get Comment in Question Id wise*/
+	public function getComments($questionId){
+		$comments = QuestionCommnent::query()->with(['customer' => function ($query) {
+		    $query->select('id','name','photo');
+		}])->orderby('id','DESC')->where('questionId',$questionId)->where('is_parent','=','0')->get();
+		
+		return view('admin.questions.comment',compact('comments'));
+	}
+	/*Child Comment*/
+	public function getChildComments($parentId){
+		try {
+	        $childComments = QuestionCommnent::query()
+	            ->with(['customer' => function ($query) {
+	                $query->select('id','name','photo');
+	            }])
+	            ->orderBy('id','DESC')
+	            ->where('parentId', $parentId)
+	            ->get();
+
+	        return response()->json($childComments);
+	    } catch (\Exception $e) {
+	        // Log the error
+	        \Log::error('Error retrieving child comments: ' . $e->getMessage());
+
+	        // Return a JSON response with an error message
+	        return response()->json(['error' => 'An error occurred while retrieving child comments.'], 500);
+	    }
+	}
+	/*Comment Delete*/
+	public function commentsDelete($id) {
+		   
+      $cdelete = QuestionCommnent::findOrFail($id);
+      	if($cdelete->delete()){
+           return Response(['status'=>'success','message'=> 'Comment deleted successfully']);  
+        } else {
+           return Response(['status'=>'error','message'=>  'Something went wrong!']); 
+        }
+  	}
+  	/*Question Import*/
+  	public function importQuestions(Request $request)
+	{
+		
+	    // Validate the uploaded file
+	    $request->validate([
+	        'question_import' => 'required|mimes:xlsx,csv',
+	    ]);
+
+	    // Get the file from the request
+	    $file = $request->file('question_import');
+
+	    try {
+	        // Read data from the file using Laravel Excel
+	        $import = new QuestionsImport;
+	        $import->import($file->store('temp'));
+
+	        // Flash success message
+	        session()->flash('success', 'Import question has been updated successfully.');
+	    } catch (ValidationException $e) {
+	        // Catch validation exceptions and flash error messages to the session
+	        $failures = $e->failures();
+	        $errorMessages = [];
+
+	        foreach ($failures as $failure) {
+	            $errorMessages[] = 'Row ' . $failure->row() . ': ' . implode(', ', $failure->errors());
+	        }
+
+	        // Flash error messages to the session
+	        session()->flash('error', implode('<br>', $errorMessages));
+	    } catch (\Exception $e) {
+	        // Flash generic error message
+	        session()->flash('error', 'An error occurred during import.');
+	    }
+
+	    // Redirect back to the questions page
+	    return redirect()->to('/admin/questions');
+		
+	}
+  	
+}
