@@ -1,0 +1,2 @@
+TopicId,Question,Description,Option1,is_correct_answer1,Option2,is_correct_answer2,Option3,is_correct_answer3,Option4,is_correct_answer4,Option5,is_correct_answer5
+Need to add topic id which you can find from the topic module of adminpanel.,Add question here,Add question description here,Add option 1 here,Put 1 if option 1 is correct or 0,Add option 2 here,Put 1 if option 2 is correct or 0,Add option 3 here,Put 1 if option 3 is correct or 0,Add option 4 here,Put 1 if option 4 is correct or 0,Add option 5 here,Put 1 if option 5 is correct or 0
