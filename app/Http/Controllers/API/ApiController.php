@@ -583,24 +583,37 @@ class ApiController extends Controller
 	       	$currentPage=($request->currentPage)?($request->currentPage):1;
 	       	$userId=($request->userId)?($request->userId):0;
 	       	$offset = ($currentPage - 1) * $perPage;
-	   		$category = LevelManagement::where('isActive',1)->offset($offset)->limit($perPage)->get();
-	   		$categoryData =$category->toArray();
-	   		$i=0;
 	   		$currentDateTime = now()->format('Y-m-d H:i:s');
-	   		foreach($categoryData as $cat){
-	   			$checkSubscribed = TransactionDetails::where("category_id",$cat['levelId'])
-	   								->where("customer_id",$userId)
-	   								->where('start_date', '<', $currentDateTime)
-								    ->where('end_date', '>=', $currentDateTime)
-								    ->where('status', '1')
-								    ->orderByDesc('end_date')
-								    ->first();
-	   			$categoryData[$i]['isSubscribed'] = $checkSubscribed ? '1' : '0';
-	   			if($cat['catImage'] != ''){	
-	   				$categoryData[$i]['catImage'] = url('images/category/'.$cat['catImage']);
-	   			}
-	   			$i++;
-	   		}
+
+	   		// PERFORMANCE FIX: Use single query with LEFT JOIN instead of N+1 queries
+	   		$categoryData = DB::table('tbllevelmanagement as l')
+	   			->leftJoin('transaction_details as td', function($join) use ($userId, $currentDateTime) {
+	   				$join->on('l.levelId', '=', 'td.category_id')
+	   					->where('td.customer_id', '=', $userId)
+	   					->where('td.start_date', '<', $currentDateTime)
+	   					->where('td.end_date', '>=', $currentDateTime)
+	   					->where('td.status', '=', '1');
+	   			})
+	   			->select(
+	   				'l.levelId',
+	   				'l.levelName',
+	   				'l.catImage',
+	   				'l.isActive',
+	   				DB::raw('CASE WHEN td.id IS NOT NULL THEN "1" ELSE "0" END as isSubscribed')
+	   			)
+	   			->where('l.isActive', 1)
+	   			->offset($offset)
+	   			->limit($perPage)
+	   			->get()
+	   			->map(function($cat) {
+	   				// Add full URL to category image
+	   				$cat = (array)$cat;
+	   				if($cat['catImage'] != ''){
+	   					$cat['catImage'] = url('images/category/'.$cat['catImage']);
+	   				}
+	   				return $cat;
+	   			})
+	   			->toArray();
 
 	    	if(count($categoryData)>0){
 	    		$mainArray = ["currentPage"=>$currentPage,"data"=>$categoryData];
