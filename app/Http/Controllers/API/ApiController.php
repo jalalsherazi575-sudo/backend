@@ -586,6 +586,8 @@ class ApiController extends Controller
 	   		$currentDateTime = now()->format('Y-m-d H:i:s');
 
 	   		// PERFORMANCE FIX: Use single query with LEFT JOIN instead of N+1 queries
+	   		// Build image URL in SQL for better performance
+	   		$baseUrl = url('/');
 	   		$categoryData = DB::table('tbllevelmanagement as l')
 	   			->leftJoin('transaction_details as td', function($join) use ($userId, $currentDateTime) {
 	   				$join->on('l.levelId', '=', 'td.category_id')
@@ -597,7 +599,7 @@ class ApiController extends Controller
 	   			->select(
 	   				'l.levelId',
 	   				'l.levelName',
-	   				'l.catImage',
+	   				DB::raw("CONCAT('$baseUrl/images/category/', l.catImage) as catImage"),
 	   				'l.isActive',
 	   				DB::raw('CASE WHEN td.id IS NOT NULL THEN "1" ELSE "0" END as isSubscribed')
 	   			)
@@ -606,12 +608,7 @@ class ApiController extends Controller
 	   			->limit($perPage)
 	   			->get()
 	   			->map(function($cat) {
-	   				// Add full URL to category image
-	   				$cat = (array)$cat;
-	   				if($cat['catImage'] != ''){
-	   					$cat['catImage'] = url('images/category/'.$cat['catImage']);
-	   				}
-	   				return $cat;
+	   				return (array)$cat;
 	   			})
 	   			->toArray();
 
