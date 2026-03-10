@@ -553,11 +553,12 @@ class CustomerApiController extends Controller{
                         $customerId=isset($registeredCustomerEmail->id)?($registeredCustomerEmail->id):0;
                 
                         //$loggedInData =  CustomerRegister::select('*',DB::raw("CONCAT('".url('/')."/customerregisterphoto/thumbnail_images/', photo) as photo"))->where('id',$customerId)->first();  
+                         // Fixed: Use $request->socialId instead of $this->socialId
                          $loggedInData =  DB::table('tblcustomerregister')
-                                -> select('*', 
+                                -> select('*',
                                     DB::raw(
-                                        empty($this->socialId) 
-                                            ? "CONCAT('" . url('/') . "/customerregisterphoto/thumbnail_images/', photo) as photo" 
+                                        empty($request->socialId)
+                                            ? "CONCAT('" . url('/') . "/customerregisterphoto/thumbnail_images/', photo) as photo"
                                             : "photo as photo"
                                     )
                                 )->where('id',$customerId)->first(); 

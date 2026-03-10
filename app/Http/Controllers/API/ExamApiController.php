@@ -191,6 +191,14 @@ Class ExamApiController extends Controller
 		$authenticate = $this->_authenticate;
         $apiauthenticate = ($request->header('AUTHENTICATE')) ? ($request->header('AUTHENTICATE')) : 1;
         $langId = ($request->header('langId')) ? ($request->header('langId')) : 1;
+
+        // Fixed: Initialize $myarray to prevent undefined variable error
+        $myarray = [
+            'result' => (object)[],
+            'message' => 'Authentication failed',
+            'status' => 0
+        ];
+
         if (in_array($apiauthenticate, $authenticate))
         {
         	$validator = Validator::make($request->all() , 
@@ -368,7 +376,7 @@ Class ExamApiController extends Controller
 		            'tblquestionoption.isCorrectAnswer'
 		        )
 		        ->where('exam.id', $exam_id)
-		        ->orWhereIn('tblquestion.questionId', array_keys($given_answers))
+		        ->whereIn('tblquestion.questionId', array_keys($given_answers)) // Fixed: Changed orWhereIn to whereIn for correct AND logic
 		        ->get();
 		    }
 		    // Group the results by question_id

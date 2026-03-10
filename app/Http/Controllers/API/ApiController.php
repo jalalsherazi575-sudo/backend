@@ -56,10 +56,16 @@ class ApiController extends Controller
         $authenticate=$this->_authenticate;
        
         if (in_array($apiauthenticate,$authenticate)) {
-			$data=DB::select( DB::raw("SELECT tblgeneralmessage.title_key,tblgeneralmessagetranslation.title_value from tblgeneralmessagetranslation
-			inner join tblgeneralmessage on tblgeneralmessage.id=tblgeneralmessagetranslation.general_message_id where tblgeneralmessagetranslation.lang_id=$lang_id and tblgeneralmessage.is_app_msg = '1'") ); 
+			// Fixed SQL Injection: Use query builder with parameter binding
+			$data = DB::table('tblgeneralmessagetranslation')
+				->join('tblgeneralmessage', 'tblgeneralmessage.id', '=', 'tblgeneralmessagetranslation.general_message_id')
+				->select('tblgeneralmessage.title_key', 'tblgeneralmessagetranslation.title_value')
+				->where('tblgeneralmessagetranslation.lang_id', '=', $lang_id)
+				->where('tblgeneralmessage.is_app_msg', '=', '1')
+				->get(); 
 			$vals='';
-			if ($data) {
+			$messageList = []; // Fixed: Initialize to prevent undefined variable error
+			if ($data && count($data) > 0) {
 		      	foreach ($data as $values) {
 				   	$title_value=$values->title_value;
 				   	$title_key=$values->title_key;
@@ -111,7 +117,12 @@ class ApiController extends Controller
 				$checkDeviceTokenCount = DB::table('tbldevicetoken')->where([['customerId', '=',$userId],['deviceType', '=',$deviceType],['deviceToken', '=',$deviceToken]])->count();
                  
                 if ($checkDeviceTokenCount > 0) {
-                	$deletecustomerpaymenttype=DB::delete("delete from tbldevicetoken where customerId='{$userId}' and deviceType='$deviceType' and deviceToken='{$deviceToken}'");
+                	// Fixed SQL Injection: Use query builder with parameter binding
+                	$deletecustomerpaymenttype=DB::table('tbldevicetoken')
+                		->where('customerId', '=', $userId)
+                		->where('deviceType', '=', $deviceType)
+                		->where('deviceToken', '=', $deviceToken)
+                		->delete();
                  	  
                  	$customerDeviceTokenUpdate=DB::table('tblcustomer')->where([['id', '=',$userId]])->update(['loginStatus'=>0,'lastLogoutDate'=>date('Y-m-d H:i:s')]);
 
@@ -164,7 +175,11 @@ class ApiController extends Controller
 						$countToken= DB::table('tbldevicetoken')->where('deviceType', '=',$deviceType)->where('deviceToken', '=',$deviceToken)->count();     
 	               
 		                if ($countToken==0) {
-		                	$deleteDeviceToken=DB::delete("delete from tbldevicetoken where deviceType='".$deviceType."' and deviceToken='".$deviceToken."'");
+		                	// Fixed SQL Injection: Use query builder with parameter binding
+		                	$deleteDeviceToken=DB::table('tbldevicetoken')
+		                		->where('deviceType', '=', $deviceType)
+		                		->where('deviceToken', '=', $deviceToken)
+		                		->delete();
 		                    $insert=DB::table('tbldevicetoken')->insert(['deviceType'=>$deviceType,'deviceToken'=>$deviceToken,'deviceDetails'=>$deviceDetails,'tokenDate'=>date('Y-m-d H:i:s')]);
 						}
 					}   
@@ -306,7 +321,11 @@ class ApiController extends Controller
 						$countToken= DB::table('tbldevicetoken')->where('deviceType', '=',$deviceType)->where('deviceToken', '=',$deviceToken)->count();     
 	               		
 	               		if ($countToken==0) {
-							$deleteDeviceToken=DB::delete("delete from tbldevicetoken where deviceType='".$deviceType."' and deviceToken='".$deviceToken."'");
+							// Fixed SQL Injection: Use query builder with parameter binding
+						$deleteDeviceToken=DB::table('tbldevicetoken')
+							->where('deviceType', '=', $deviceType)
+							->where('deviceToken', '=', $deviceToken)
+							->delete();
 		                    $insert=DB::table('tbldevicetoken')->insert(['deviceType'=>$deviceType,'deviceToken'=>$deviceToken,'deviceDetails'=>$deviceDetails,'tokenDate'=>date('Y-m-d H:i:s')]);
 						}
 					}   
