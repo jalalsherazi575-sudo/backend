@@ -333,7 +333,7 @@ class ApiController extends Controller
 			$myarray['result']=(object)array();					
 			$myarray['message']="Invalid Authentication.";
 			$myarray['status']=0;
-			$final_array = array("result"=>$my_array,"message"=>"",'status'=>1);
+			$final_array = $myarray; // Fixed: use $myarray instead of undefined $my_array
         }      
 		return response()->json($final_array);			
 	}

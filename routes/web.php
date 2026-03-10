@@ -95,7 +95,7 @@ Route::group([
  // 'middleware' => 'admin'
 ], function(){
 
-Auth::routes();
+// Auth::routes(); // Commented out - causes conflict with custom login at /login
 
 
     // Dashboard
